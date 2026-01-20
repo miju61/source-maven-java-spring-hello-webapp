@@ -1,14 +1,15 @@
 pipeline {
   agent none
 
-  stage {
+  stages {
     stage('CheckOut') {
       agent any
       steps {
-          git branch: 'main',
-          url: 'https://github.com/miju61/source-maven-java-spring-hello-webapp.git'
+        git branch: 'main',
+            url: 'https://github.com/miju61/source-maven-java-spring-hello-webapp.git'
       }
     }
+
     stage('Build') {
       agent {
         docker { image 'maven:3-openjdk-17' }
@@ -17,34 +18,37 @@ pipeline {
         sh 'mvn clean package'
       }
     }
+
     stage('ImageBuild') {
       agent any
       steps {
-        sh 'docker image build -t tomcat:hello .'
+        sh 'docker -H tcp://192.168.56.103:2375 image build -t tomcat:hello .'
       }
     }
+
     stage('ImageTag') {
       agent any
       steps {
-        sh 'docker image tag tomcat:hello leemiju/tomcat:$BUILDNUMBER'
-        sh 'docker image tag tomcat:hello leemiju/tomcat:latest'
+        sh 'docker -H tcp://192.168.56.103:2375 image tag tomcat:hello leemiju/tomcat:${BUILD_NUMBER}'
+        sh 'docker -H tcp://192.168.56.103:2375 image tag tomcat:hello leemiju/tomcat:latest'
       }
     }
+
     stage('ImagePush') {
       agent any
       steps {
         withDockerRegistry(credentialsId: 'docker-hub-token', url: 'https://index.docker.io/v1/') {
-          sh 'docker image push leemiju/tomcat:$BUILDNUMBER'
-          sh 'docker image push leemiju/tomcat:latest'
+          sh 'docker -H tcp://192.168.56.103:2375 image push leemiju/tomcat:${BUILD_NUMBER}'
+          sh 'docker -H tcp://192.168.56.103:2375 image push leemiju/tomcat:latest'
         }
       }
     }
+
     stage('Running Container') {
-      agent {
-        docker { image 'docker:dind' }
-      }
+      agent any
       steps {
-        sh 'docker -H tcp://192.168.56.103:2375 run -d --name webserver -p 80:8080 leemiju/tomcat:latest
+        sh 'docker -H tcp://192.168.56.103:2375 rm -f webserver || true'
+        sh 'docker -H tcp://192.168.56.103:2375 run -d --name webserver -p 80:8080 leemiju/tomcat:latest'
       }
     }
   }
