@@ -26,7 +26,6 @@ pipeline {
     stage('ImageTag') {
       agent any
       steps {
-        sh 'docker image tag tomcat:hello leemiju/tomcat:$BUILD_NUMBER'
         sh 'docker image tag tomcat:hello leemiju/tomcat:latest'
       }
     }
@@ -34,7 +33,6 @@ pipeline {
       agent any
       steps {
         withDockerRegistry(credentialsId: 'docker-hub-token', url: 'https://index.docker.io/v1/') {
-          sh 'docker image push leemiju/tomcat:$BUILD_NUMBER'
           sh 'docker image push leemiju/tomcat:latest'
         }
       }
